@@ -50,23 +50,19 @@ func (s *State) List() []*Alarm {
 }
 
 // MarkConfirmed confirms exactly one alarm: the alarm whose id was passed.
-func (s *State) MarkConfirmed(gaugeID string, at time.Time) (*Alarm, error) {
-	var confirmed *Alarm
-	for _, a := range s.alarms {
-		if a.GaugeID != gaugeID {
-			continue
-		}
-		a.Status = StatusConfirmed
-		a.ConfirmedAt = &at
-		if err := store.WriteJSON(s.st, "alarms/"+a.ID+".json", a); err != nil {
-			return nil, err
-		}
-		confirmed = a
+// Newer alarms raised for the same transmitter stay raised until they are
+// reviewed individually.
+func (s *State) MarkConfirmed(id string, at time.Time) (*Alarm, error) {
+	a, ok := s.alarms[id]
+	if !ok {
+		return nil, fmt.Errorf("alarm: not found %s", id)
 	}
-	if confirmed == nil {
-		return nil, fmt.Errorf("alarm: no alarms for gauge %s", gaugeID)
+	a.Status = StatusConfirmed
+	a.ConfirmedAt = &at
+	if err := store.WriteJSON(s.st, "alarms/"+a.ID+".json", a); err != nil {
+		return nil, err
 	}
-	return confirmed, nil
+	return a, nil
 }
 
 // Load restores alarms from the store.
