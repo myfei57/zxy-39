@@ -1,0 +1,7 @@
+.git
+.claude
+data
+*.jsonl
+*.log
+gocache
+gomodcache
