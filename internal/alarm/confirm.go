@@ -9,5 +9,5 @@ func (e *Engine) Confirm(id string) (*Alarm, error) {
 	if !ok {
 		return nil, errAlarmNotFound
 	}
-	return e.state.MarkConfirmed(a.GaugeID, time.Now())
+	return e.state.MarkConfirmed(a.ID, time.Now())
 }
