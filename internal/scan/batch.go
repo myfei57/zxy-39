@@ -18,8 +18,12 @@ func (s *Service) ScanBatch(ctx context.Context, plan []*gauge.Gauge) (Batch, er
 	for _, g := range plan {
 		reading, err := s.poller.ReadOne(ctx, g.ID)
 		if err != nil {
+			// Isolate the failure to this gauge only: record it and keep
+			// sampling the rest of the plan. A single read timeout must
+			// not abort the batch and blank every later gauge in the same
+			// cycle (e.g. PT-103 timing out must not skip PT-104..PT-108).
 			batch.Items = append(batch.Items, Item{GaugeID: g.ID, Err: err})
-			return batch, err
+			continue
 		}
 		batch.Items = append(batch.Items, Item{GaugeID: g.ID, Reading: reading})
 	}
