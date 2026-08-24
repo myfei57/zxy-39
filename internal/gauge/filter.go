@@ -3,9 +3,11 @@ package gauge
 import "math"
 
 // ApplyDeadband applies the analog deadband filter to a reading for display
-// and storage. The raw sensor value is preserved on the reading so the alarm
-// path always evaluates the true measurement; only the filtered display value
-// is suppressed.
+// and storage. It only computes the filtered display value; the raw sensor
+// measurement on r.Value, r.Raw and g.RawValue is left untouched so the alarm
+// path always evaluates the true reading. Without this, a small genuine
+// fluctuation that never clears the deadband would be suppressed before the
+// alarm judgement runs and could never raise an alarm.
 func (g *Gauge) ApplyDeadband(r *Reading) {
 	last := g.FilteredValue
 	if math.Abs(r.Value-last) < g.Deadband {
@@ -14,7 +16,4 @@ func (g *Gauge) ApplyDeadband(r *Reading) {
 		r.Filtered = r.Value
 	}
 	g.FilteredValue = r.Filtered
-	r.Value = r.Filtered
-	r.Raw = r.Filtered
-	g.RawValue = r.Filtered
 }
