@@ -5,17 +5,17 @@ import (
 )
 
 // SwitchMode changes the operator control mode and persists the new mode. The
-// control guard reads the mode back through LiveMode so the very next command
-// is judged against the switched mode.
+// in-memory station is updated in place so the control guard reads the new
+// mode back through LiveMode and the very next command is judged against the
+// switched mode.
 func (r *Registry) SwitchMode(id string, mode Mode) (*Station, error) {
 	s, ok := r.stations[id]
 	if !ok {
 		return nil, fmt.Errorf("station: %s not found", id)
 	}
-	saved := *s
-	saved.Mode = mode
-	saved.touch()
-	if err := r.Save(&saved); err != nil {
+	s.Mode = mode
+	s.touch()
+	if err := r.Save(s); err != nil {
 		return nil, err
 	}
 	return s, nil
