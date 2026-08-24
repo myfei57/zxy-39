@@ -34,14 +34,14 @@ func (s *Service) Set(ctx context.Context, stationID, reason string) error {
 }
 
 // Release clears the interlock latch once the pressure condition is gone and
-// reopens the valve. The latch is cleared first; the valve follows.
+// reopens the valve. The latch is cleared first; the valve follows. The caller
+// (scan cycle or console) is responsible for confirming the pressure has
+// returned to normal; the valve is held closed by Set for as long as the latch
+// is held, so it must not be a precondition for release.
 func (s *Service) Release(ctx context.Context, stationID string) error {
 	latch, ok := s.latches[stationID]
 	if !ok || !latch.Held {
 		return nil
-	}
-	if !s.control.ValveOpen(ctx, stationID) {
-		return fmt.Errorf("interlock: valve %s still closed, release rejected", stationID)
 	}
 	latch.Held = false
 	latch.ReleasedAt = time.Now()
