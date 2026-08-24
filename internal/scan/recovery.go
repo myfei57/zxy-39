@@ -26,9 +26,15 @@ func (s *Service) HandleRecovery(ctx context.Context, sectionID string) error {
 		CycleNumber: s.tracker.Current().Number,
 		RecoveredAt: time.Now(),
 	}
+	// Persist the recovery record first; only once it is durable is it safe
+	// to lift flood suppression. A failed write leaves the section suppressed
+	// so later real alarms stay visible instead of being swallowed as flood
+	// residue.
+	if err := store.WriteJSON(s.store, "recovery/"+sectionID+".json", recovery); err != nil {
+		return err
+	}
 	if err := s.alarms.EndSuppression(sectionID); err != nil {
 		return err
 	}
-	_ = store.WriteJSON(s.store, "recovery/"+sectionID+".json", recovery)
 	return nil
 }
