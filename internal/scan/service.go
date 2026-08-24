@@ -115,8 +115,15 @@ func (s *Service) RunCycle(ctx context.Context) (*Cycle, error) {
 				s.audit.Record(*audit.NewEvent(audit.EventInterlock, r.StationID, r.GaugeID, sectionID, "rise rate triggered"))
 				_ = s.alarms.Trigger(ctx, s.interlocks, r.StationID, "pressure rise rate")
 			}
-			if r.Value <= s.alarms.Thresholds().PressureLow && s.interlocks.IsHeld(r.StationID) {
+			// The overpressure interlock is set once pressure reaches the high
+			// threshold (>= PressureHigh). Release it as soon as pressure
+			// falls back below that threshold, i.e. into the normal band, and
+			// reopen the valve. The comparison is strict (<) so the release can
+			// never fire in the same cycle as the Set; the low threshold is a
+			// distinct low-pressure alarm and must not gate overpressure relief.
+			if r.Value < s.alarms.Thresholds().PressureHigh && s.interlocks.IsHeld(r.StationID) {
 				if err := s.interlocks.Release(ctx, r.StationID); err == nil {
+					s.audit.Record(*audit.NewEvent(audit.EventInterlock, r.StationID, r.GaugeID, sectionID, "pressure normal; released"))
 					if st, ok := s.stations.Get(r.StationID); ok {
 						_ = s.stations.SetState(st, station.StateReleased)
 						_ = s.stations.SetInterlock(st, false)
